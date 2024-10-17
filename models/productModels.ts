@@ -1,3 +1,5 @@
+import client from "../database/db.ts";
+
 export interface Product {
   id: number;
   name: string;
@@ -5,32 +7,32 @@ export interface Product {
   description: string;
 }
 
-let products: Product[] = [
-  { id: 1, name: "Laptop", price: 999.99, description: "A high-performance laptop" },
-  { id: 2, name: "Phone", price: 699.99, description: "A powerful smartphone" },
-];
-
-export const getAllProducts = () => products;
-
-export const getProductById = (id: number) => products.find((product) => product.id === id);
-
-export const addProduct = (product: Omit<Product, "id">) => {
-  const newProduct: Product = { id: products.length ? products[products.length - 1].id + 1 : 1, ...product };
-  products.push(newProduct);
-
-  return newProduct;
+export const getAllProducts = async (): Promise<Product[]> => {
+  const result = await client.query<Product>("SELECT * FROM products");
+  return result.rows;
 };
 
-export const updateProduct = (id: number, updatedProduct: Omit<Product, "id">) => {
-  const index = products.findIndex((product) => product.id === id);
-  if (index !== -1) {
-    products[index] = { id, ...updatedProduct };
-    return products[index];
-  }
-
-  return null;
+export const getProductById = async (id: number): Promise<Product | null> => {
+  const result = await client.query<Product>("SELECT * FROM products WHERE id = $1", id);
+  return result.rows.length ? result.rows[0] : null;
 };
 
-export const deleteProduct = (id: number) => {
-  products = products.filter((product) => product.id !== id);
+export const addProduct = async (product: Omit<Product, "id">): Promise<Product> => {
+  const result = await client.query<Product>(
+    "INSERT INTO products (name, price, description) VALUES ($1, $2, $3) RETURNING *",
+    product.name, product.price, product.description,
+  );
+  return result.rows[0];
+};
+
+export const updateProduct = async (id: number, product: Omit<Product, "id">): Promise<Product | null> => {
+  const result = await client.query<Product>(
+    "UPDATE products SET name = $1, price = $2, description = $3 WHERE id = $4 RETURNING *",
+    product.name, product.price, product.description, id,
+  );
+  return result.rows.length ? result.rows[0] : null;
+};
+
+export const deleteProduct = async (id: number): Promise<void> => {
+  await client.query("DELETE FROM products WHERE id = $1", id);
 };
