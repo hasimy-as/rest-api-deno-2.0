@@ -1,7 +1,11 @@
 import { config } from "npm:dotenv";
-import { productRouter } from "./routes/route.ts";
 
+import { productRouter } from "./routes/route.ts";
+import { connectDb } from "./database/db.ts";
+
+// Server setup
 config();
+await connectDb();
 
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
